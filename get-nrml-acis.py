@@ -15,7 +15,11 @@
 import requests
 from urllib.parse import urlencode, quote_plus
 from datetime import datetime
-
+import foldercreate
+# Station identifier and date range
+station_id = 'BOSthr'
+start_date = datetime(2020,1,1)
+end_date = datetime(2020, 12, 31)
 def fetch_weather_data(station_id, start_date, end_date):
     base_url = 'https://data.rcc-acis.org/StnData?'
     if start_date =='por':
@@ -34,24 +38,12 @@ def fetch_weather_data(station_id, start_date, end_date):
     response = requests.post(base_url,json=params)
     response.raise_for_status()  # Raise an error for bad HTTP status codes
     return response.text
-
 def main():
-    # Station identifier and date range
-    station_id = 'BOSthr'
-    start_date = datetime(2020,1,1)
-    end_date = datetime(2020, 12, 31)
-    outdir = '/Users/triforce/DataRequests/ACIS/'
+    outdir = foldercreate.folder_check()
     # Fetch data from the web
     weather_data = fetch_weather_data(station_id, start_date, end_date)
     f = open(f'{station_id}-Temperature-Normals.txt',"w")
     f.write(weather_data)
     f.close()
-    
-
-    # Save data to a CSV file
-   # output_file = 
-    #df.to_csv(outdir+output_file)
-    #print(f'Data saved to {outdir}{output_file}')
-
 if __name__ == "__main__":
     main()

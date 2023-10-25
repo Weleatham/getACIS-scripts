@@ -17,7 +17,11 @@ import requests
 import pandas as pd
 import numpy as np
 from datetime import datetime
-
+import foldercreate
+# Station identifier and date range
+station_id = 'ORHthr'
+start_date = 'por'
+end_date = datetime(2023, 10, 20)
 def fetch_weather_data(station_id, start_date, end_date):
     base_url = 'https://data.rcc-acis.org/StnData?'
     if start_date =='por':
@@ -32,17 +36,11 @@ def fetch_weather_data(station_id, start_date, end_date):
         'elems': 'maxt,mint,pcpn,snow,snwd,cdd,hdd,gdd',
         'output': 'json',
     }
-
     response = requests.get(base_url, params=params)
     response.raise_for_status()  # Raise an error for bad HTTP status codes
     return response.json()
-
 def main():
-    # Station identifier and date range
-    station_id = 'ORHthr'
-    start_date = 'por'
-    end_date = datetime(2023, 10, 20)
-    outdir = '/Users/triforce/DataRequests/ACIS/'
+    outdir = foldercreate.folder_check()
     # Fetch data from the web
     weather_data = fetch_weather_data(station_id, start_date, end_date)
     #print(weather_data)
@@ -62,6 +60,5 @@ def main():
     output_file = f'{station_id}-Ending-{end_date.year}-{end_date.month}-{end_date.day}.csv'
     df.to_csv(outdir+output_file)
     print(f'Data saved to {outdir}{output_file}')
-
 if __name__ == "__main__":
     main()

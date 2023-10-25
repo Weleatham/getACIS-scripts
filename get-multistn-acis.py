@@ -10,7 +10,7 @@
 # See rcc-acis.org/docs_webservices.html for more detailed information. 
 ###############################################################################
 # Edits:
-# 
+# Added a folder check for where the data is downloaded to.
 ###############################################################################
 """
 import requests
@@ -18,13 +18,10 @@ from datetime import datetime
 import pandas as pd
 import numpy as np
 from io import StringIO
-
+import foldercreate
 # Station identifiers via cwa or state and date of interest.
 station_id = 'BOX'#',aly,okx,gyx,btv'
 the_date = datetime(2011,10,30)
-# Where you would like the output to be placed.
-outdir = '/Users/triforce/DataRequests/ACIS/'
-
 def fetch_weather_data(station_id, the_date):
     base_url = 'https://data.rcc-acis.org/MultiStnData?'
     params = {
@@ -35,12 +32,12 @@ def fetch_weather_data(station_id, the_date):
         'output':'csv'
         #pcpn
     }
-    
     response = requests.post(base_url,json=params)
     response.raise_for_status()  # Raise an error for bad HTTP status codes
     return response.content
-
 def main():
+    # First checking if the folder directories are created or not.
+    outdir = foldercreate.folder_check()
     # Fetch data from the web
     weather_data = fetch_weather_data(station_id, the_date)
     # Parse the CSV data into a dataframe
@@ -55,6 +52,5 @@ def main():
     output_file = f'{station_id}-{the_date.year}-{the_date.month}-{the_date.day}.csv'
     df.to_csv(outdir+output_file)
     print(f'Data saved to {outdir}{output_file}')
-
 if __name__ == "__main__":
     main()
