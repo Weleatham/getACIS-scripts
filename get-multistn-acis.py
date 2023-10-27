@@ -20,7 +20,7 @@ import numpy as np
 from io import StringIO
 import foldercreate
 # Station identifiers via cwa or state and date of interest.
-station_id = 'BOX'#',aly,okx,gyx,btv'
+station_id = 'BTV'#',aly,okx,gyx,btv'
 the_date = datetime(2011,10,30)
 def fetch_weather_data(station_id, the_date):
     base_url = 'https://data.rcc-acis.org/MultiStnData?'
@@ -37,7 +37,7 @@ def fetch_weather_data(station_id, the_date):
     return response.content
 def main():
     # First checking if the folder directories are created or not.
-    outdir = foldercreate.folder_check()
+    outdir = foldercreate.folder_check("DataRequests","ACIS","Snowtober")
     # Fetch data from the web
     weather_data = fetch_weather_data(station_id, the_date)
     # Parse the CSV data into a dataframe
