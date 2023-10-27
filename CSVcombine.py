@@ -19,14 +19,15 @@ import os
 # the files that they want to combine. 
 usrdir = os.path.expanduser('~')+"/"
 data_dir = usrdir+"DataRequests/ACIS/Snowtober/"
-cwa = "BTV"
+offices = ('BOX','ALY','OKX','GYX','BTV')
 datval = "SNOWFALL"
 
 def merge_col(x):
         return ','.join(x[x.notnull()].astype(str))
 def main():
-    data_combine(cwa,data_dir,datval)
-    #append_dfs("Snowtober",data_dir)
+    for cwa in offices:
+        data_combine(cwa,data_dir,datval)
+    append_dfs("Snowtober",data_dir)
 
 def data_combine(header,directory,val_str):
     # Combine data via CWA first. 
@@ -36,10 +37,11 @@ def data_combine(header,directory,val_str):
     # Appending each of the files to a list.
     for f in files:
         dfi = pd.read_csv(directory+f,index_col=0)
-        dfi.set_index('UID',inplace=True)
     # Removing where any of the data is missing.
         dfi = dfi.dropna(subset=['Val_in'])
-        print(dfi.duplicated(subset=dfi.index,keep="last"))
+    # Removing duplicate information when the data is missing/blank.
+        dfi = dfi.sort_values(['UID','Val_in'],ascending=['True','False']).drop_duplicates(['UID'])
+        dfi.set_index('UID',inplace=True)
         lst.append(dfi)
     # Concatenate the list of the dataframes.
     df_f = pd.concat(lst,axis=1)
@@ -54,14 +56,20 @@ def data_combine(header,directory,val_str):
     # Removing the duplicate columns.
     df_f = df_f.T.drop_duplicates().T
     # Creating the file name from the two files.
-    output_file = "Combined-"+val_str+"-"+header+".csv"
+    output_file = "Merged-"+val_str+"-"+header+".csv"
     df_f.to_csv(directory+output_file)
     print(f'Data saved to {data_dir}{output_file}')
 
-def append_dfs(header,filename,directory):
-   # combined_df = (pd.read_csv(f) for f in os.listdir())
-   files = [x for x in os.listdir(directory) if x.endswith(header+".csv")]
+def append_dfs(filename,directory):
+   #Listing only the files in the directory that start with the name merged.
+   # Comes from the data_combine section above.
+   files = [x for x in os.listdir(directory) if x.startswith("Merged")]
+   # Bringing together all of the Merged csv files in the directory.
    combined_df = pd.concat((pd.read_csv(directory+f) for f in files),ignore_index=True)
+   combined_df.set_index('UID',inplace=True)
+   # Setting values that are equal to 0.001 back to a trace. May need to revisit here
+   # for longer term data.
+   combined_df ['SNOWFALL'] = combined_df['SNOWFALL'].replace(0.001,'T')
    combined_df.to_csv(directory+filename+".csv")
    print(f'Data saved: {directory}{filename}.csv')
 
