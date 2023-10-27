@@ -17,49 +17,53 @@ import os
 # Grabbing the directory where the data is located. This is also where the
 # combined output file will be placed. The user must also enter the names of
 # the files that they want to combine. 
-data_dir = "/home/Shire/DataRequests/ACIS/Snowtober/"
-cwa = "OKX"
-f1 = cwa+"-2011-10-29.csv"
-f2 = cwa+"-2011-10-30.csv"
-# File naming convention.
-fname, f_ext = f1.split('.')
-fdate = f2.split('.')[0].split('-')[3]
+usrdir = os.path.expanduser('~')+"/"
+data_dir = usrdir+"DataRequests/ACIS/Snowtober/"
+cwa = "BTV"
+datval = "SNOWFALL"
 
+def merge_col(x):
+        return ','.join(x[x.notnull()].astype(str))
 def main():
-    data_combine(f1,f2,data_dir)
-    append_dfs(data_dir)
+    data_combine(cwa,data_dir,datval)
+    #append_dfs("Snowtober",data_dir)
 
-def data_combine(file1,file2,directory):
-    # Opening the two pandas dataframes.
-    df1 = pd.read_csv(directory+file1,index_col=0)
-    df2 = pd.read_csv(directory+file2,index_col=0)
-    # Changing the index to the CITYNAME.
-    df1.set_index('CITYNAME',inplace=True)
-    df2.set_index('CITYNAME',inplace=True)
-    # Bringing together the two pandas dataframes.
-    df_f = pd.concat([df1,df2],axis=1)
-    df_f.index.rename('CITYNAME',inplace=True)
-    # Summing up the columns of data we need. Then we remove the columns that we 
-    # do not need.
-    df_f['SNOWFALL'] = df_f['Val_in'].sum(axis=1)
-    df_f = df_f.drop(columns=['UID','Elev_ft','Date','Val_in'])
-    # Combining the areas where there is missing data based on the column index.
-    # Then removing the columns we used to fill in the data.
-    for i in range(4):
-        df_f.iloc[:,i].fillna(df_f.iloc[:,i+4],inplace=True)
-    # Removing the duplicate columns
-    df_f = df_f.loc[:,~df_f.columns.duplicated()]
+def data_combine(header,directory,val_str):
+    # Combine data via CWA first. 
+    # Finding all the files that start with the CWA name.
+    files = [x for x in os.listdir(directory) if x.startswith(header)]
+    lst = []
+    # Appending each of the files to a list.
+    for f in files:
+        dfi = pd.read_csv(directory+f,index_col=0)
+        dfi.set_index('UID',inplace=True)
+    # Removing where any of the data is missing.
+        dfi = dfi.dropna(subset=['Val_in'])
+        print(dfi.duplicated(subset=dfi.index,keep="last"))
+        lst.append(dfi)
+    # Concatenate the list of the dataframes.
+    df_f = pd.concat(lst,axis=1)
+    df_f.index.rename('UID',inplace=True)
+    # Summing totals from the Val_in columns. 
+    df_f[val_str] = df_f.filter(like='Val_in').sum(axis=1)
+    # Filling in where there is NaN in columns outside of Snowfall
+    for i in lst:
+        df_f.update(i)
+    # Removing some of the columns that we no longer need.
+    df_f = df_f.drop(columns=['Elev_ft','Date','Val_in',])
+    # Removing the duplicate columns.
+    df_f = df_f.T.drop_duplicates().T
     # Creating the file name from the two files.
-    output_file = fname+'-to-'+fdate+'.'+f_ext
+    output_file = "Combined-"+val_str+"-"+header+".csv"
     df_f.to_csv(directory+output_file)
     print(f'Data saved to {data_dir}{output_file}')
 
-def append_dfs(filename,directory):
-    for x in os.listdir(directory):
-        if x.endswith("-to-"+fdate+'.'+f_ext):
-            combined_df = pd.append([pd.read_csv(x)])
-            combined_df.to_csv(directory+filename+f_ext)
-            print(f'Data saved to {directory}{filename}{f_ext}')
+def append_dfs(header,filename,directory):
+   # combined_df = (pd.read_csv(f) for f in os.listdir())
+   files = [x for x in os.listdir(directory) if x.endswith(header+".csv")]
+   combined_df = pd.concat((pd.read_csv(directory+f) for f in files),ignore_index=True)
+   combined_df.to_csv(directory+filename+".csv")
+   print(f'Data saved: {directory}{filename}.csv')
 
 if __name__ == "__main__":
     main()
