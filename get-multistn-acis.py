@@ -22,10 +22,10 @@ from io import StringIO
 import foldercreate
 # Station identifiers via cwa or state and date of interest.
 station_ids = ('BOX','ALY','OKX','GYX','BTV')
-sdate = datetime(2011,10,28)
-num_days = 3
+sdate = datetime(1894,11,5)
+num_days = 2
 # First checking if the folder directories are created or not.
-outdir = foldercreate.folder_check("DataRequests","ACIS","Snowtober")
+outdir = foldercreate.folder_check("DataRequests","ACIS","1894-ElectionDay")
 def fetch_weather_data(station_id, the_date):
     base_url = 'https://data.rcc-acis.org/MultiStnData?'
     params = {

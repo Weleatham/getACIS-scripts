@@ -13,21 +13,22 @@
 ###############################################################################
 """
 import pandas as pd
+import numpy as np
 import os
 # Grabbing the directory where the data is located. This is also where the
 # combined output file will be placed. The user must also enter the names of
 # the files that they want to combine. 
 usrdir = os.path.expanduser('~')+"/"
-data_dir = usrdir+"DataRequests/ACIS/Snowtober/"
+data_dir = usrdir+"DataRequests/ACIS/1894-ElectionDay/"
 offices = ('BOX','ALY','OKX','GYX','BTV')
 datval = "SNOWFALL"
 
 def merge_col(x):
         return ','.join(x[x.notnull()].astype(str))
 def main():
-    for cwa in offices:
-        data_combine(cwa,data_dir,datval)
-    append_dfs("Snowtober",data_dir)
+   # for cwa in offices:
+    #    data_combine(cwa,data_dir,datval)
+    append_dfs("1894-ElectionDay",data_dir,datval,1)
 
 def data_combine(header,directory,val_str):
     # Combine data via CWA first. 
@@ -40,7 +41,7 @@ def data_combine(header,directory,val_str):
     # Removing where any of the data is missing.
         dfi = dfi.dropna(subset=['Val_in'])
     # Removing duplicate information when the data is missing/blank.
-        dfi = dfi.sort_values(['UID','Val_in'],ascending=['True','False']).drop_duplicates(['UID'])
+        dfi = dfi.sort_values(['UID','Val_in'],ascending=[True,False]).drop_duplicates(['UID'])
         dfi.set_index('UID',inplace=True)
         lst.append(dfi)
     # Concatenate the list of the dataframes.
@@ -60,16 +61,21 @@ def data_combine(header,directory,val_str):
     df_f.to_csv(directory+output_file)
     print(f'Data saved to {data_dir}{output_file}')
 
-def append_dfs(filename,directory):
+def append_dfs(filename,directory,val_str,precision):
    #Listing only the files in the directory that start with the name merged.
    # Comes from the data_combine section above.
    files = [x for x in os.listdir(directory) if x.startswith("Merged")]
    # Bringing together all of the Merged csv files in the directory.
    combined_df = pd.concat((pd.read_csv(directory+f) for f in files),ignore_index=True)
    combined_df.set_index('UID',inplace=True)
-   # Setting values that are equal to 0.001 back to a trace. May need to revisit here
-   # for longer term data.
-   combined_df ['SNOWFALL'] = combined_df['SNOWFALL'].replace(0.001,'T')
+   # Rounding the column to user defined precision when it is not a trace 
+   # value. Setting value to trace when it is greater than 0, but less than 0.004.
+   combined_df [val_str] = np.where((combined_df[val_str] > 0.004),
+                                    combined_df[val_str].round(precision),
+                                    combined_df[val_str])
+   combined_df[val_str] = np.where((combined_df[val_str] >0) & 
+                                       (combined_df[val_str] <= 0.004),'T',
+                                              combined_df[val_str])   
    combined_df.to_csv(directory+filename+".csv")
    print(f'Data saved: {directory}{filename}.csv')
 
