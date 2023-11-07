@@ -16,22 +16,19 @@
 # dataframe that is summed up and returned to the user.
 ###############################################################################
 """
-import requests
+import requests, json, foldercreate
 from datetime import datetime
 import pandas as pd
 import numpy as np
-from io import StringIO
-import foldercreate
-import json
 # Station identifiers via bounding box.
 bounds = "-74.5,40.3,-68.0,43.2"
 var = "snow" #pcpn
 sumhead = "SNOWFALL"
-sdate = datetime(2015,2,14)
-edate = datetime(2015,2,16)
+sdate = datetime(1894,12,10)
+edate = datetime(1894,12,13)
 precision = 1
 # First checking if the folder directories are created or not.
-outdir = foldercreate.folder_check("DataRequests","ACIS","Feb-14-16-2015")
+outdir = foldercreate.folder_check("DataRequests","ACIS","Dec-1960")
 def fetch_weather_data(bound_box,start_date,end_date,variable):
     base_url = 'https://data.rcc-acis.org/MultiStnData?'
     params = {
@@ -62,22 +59,25 @@ def main():
             'Data': x['data'],
             })
     df = pd.DataFrame(json_parsed)
-    # Adding the snow/precip/temp data to the dataframe a month at a time.
+    # Adding the snow/precip/temp data to the dataframe a day at a time.
     df[the_date_lst] = pd.DataFrame(df['Data'].tolist()).map(lambda x: x[0])
     # Removing the extra data column we don't need.
     df = df.drop(columns='Data')
     # Converting the data into a numeric value.
     df[the_date_lst] = df[the_date_lst].replace('M',np.nan)
+    # Need to replace the days where the observer missed putting data in. Save
+    # as a negative so the user can see this is a multi-day accumulation.
+    df[the_date_lst] = df[the_date_lst].replace('S',-0.0001)
     df[the_date_lst] = df[the_date_lst].replace('T',0.0001)
+    # Keeping only numerical data, as the multi-day accumulation has an a attached
+    # to it.
+    df[the_date_lst] = df[the_date_lst].replace('[^\d.]','',regex=True).astype(float)
     df[the_date_lst] = df[the_date_lst].apply(pd.to_numeric)
     # Summing up the columns of data. If one month is missing data then
     # the SUM is equal to NaN.
     df[sumhead] = df[the_date_lst].sum(axis=1, min_count=1)
     df[sumhead] = np.where((df[sumhead] > 0.0004),
                                     df[sumhead].round(precision),
-                                    df[sumhead])
-    df[sumhead] = np.where((df[sumhead] <= 0.0004),
-                                    'T',
                                     df[sumhead])
     df.set_index('UID',inplace=True) 
     # Save data to a CSV file
